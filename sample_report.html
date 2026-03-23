@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Health Report - WIN-AP2LVFLNMMR</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        :root {
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-hover: rgba(30, 41, 59, 0.9);
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --critical: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --border: rgba(255,255,255,0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.1), transparent 40%);
+            background-attachment: fixed;
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .header { text-align: center; margin-bottom: 2rem; animation: fadeIn 1s ease-in-out; }
+        .header h1 { font-size: 2.8rem; background: linear-gradient(to right, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; letter-spacing: -1px; }
+        .header p { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 0.5rem;}
+        
+        .live-badge {
+            display: inline-flex; align-items: center; background: rgba(16, 185, 129, 0.2); 
+            color: var(--success); padding: 0.3rem 0.8rem; border-radius: 9999px; font-weight: 600; font-size: 0.85rem; border: 1px solid rgba(16,185,129,0.3);
+        }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card {
+            background: var(--surface); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease; animation: slideUp 0.6s ease-out backwards;
+        }
+        .card:hover { transform: translateY(-5px); background: var(--surface-hover); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); border-color: rgba(255,255,255,0.2); }
+        .card-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1.2rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+        
+        .chart-container { position: relative; height: 300px; width: 100%; }
+
+        .metric { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+        .metric:last-of-type { border-bottom: none; }
+        .metric-label { color: var(--text-muted); font-size: 0.95rem; }
+        .metric-value { font-weight: 600; font-size: 1.05rem; }
+
+        .table-wrapper { overflow-x: auto; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 0.8rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: rgba(0, 0, 0, 0.2); color: #cbd5e1; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.03); }
+
+        .alert { padding: 1.2rem; border-radius: 12px; margin-bottom: 1rem; font-weight: 500; display: flex; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .alert-critical { background: rgba(239, 68, 68, 0.15); border-left: 5px solid var(--critical); color: #fca5a5; }
+        .alert-warning { background: rgba(245, 158, 11, 0.15); border-left: 5px solid var(--warning); color: #fcd34d; }
+        .alert-success { background: rgba(16, 185, 129, 0.15); border-left: 5px solid var(--success); color: #6ee7b7; }
+
+        .dashboard-section { margin-bottom: 3.5rem; }
+        .dashboard-section > h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; color: #e2e8f0; display: flex; align-items: center; }
+        .dashboard-section > h2::before { content: ''; display: inline-block; width: 8px; height: 24px; background: linear-gradient(to bottom, var(--primary), var(--secondary)); border-radius: 4px; margin-right: 12px; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Server Resource & Health Report</h1>
+        <p>Host: <strong style="color:#fff;">WIN-AP2LVFLNMMR</strong> | Updated: <strong style="color:#fff;">03/22/2026 23:55:00</strong></p>
+        
+        <p>Target Duration: 7 Days | Remaining: 0d 0h 0m</p>
+        <div style="margin-top: 1rem;">
+            <span class="live-badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
+                <span style="display:inline-block; width:8px; height:8px; background:#60a5fa; border-radius:50%; margin-right:6px;"></span>
+                EXTREME LOAD SIMULATION - COMPLETED
+            </span>
+        </div>
+    </div>
+
+    <!-- Recommendations Section -->
+    <div class="dashboard-section">
+        <h2>Insights & Recommendations (Latest)</h2>
+        <div class="card" style="padding: 1rem; border: none; background: transparent; backdrop-filter: none; box-shadow: none;">
+            <div class='alert alert-critical'>Critical: High CPU utilization (98%). Consider investigating the top CPU-consuming apps (like chrome) or scaling up compute resources.</div>
+            <div class='alert alert-critical'>Critical: System is running low on memory (94.2% used). Suggest adding more RAM immediately. The server is swapping to disk heavily.</div>
+            <div class='alert alert-warning'>Warning: User dev_user1 is consuming more than 50% of the entire Server RAM.</div>
+            <div class='alert alert-warning'>Warning: Drive C: is almost full (95.4% used). Clean up temporary files or expand the disk to prevent catastrophic slowness.</div>
+            <div class='alert alert-warning'>Warning: Found 42 application crashes in the Event Logs. Applications to investigate: chrome.exe, java.exe, Code.exe.</div>
+        </div>
+    </div>
+
+    <!-- Trend Charts -->
+    <div class="dashboard-section">
+        <h2>Resource Utilization Trends</h2>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));">
+            <div class="card">
+                <div class="card-title">Server Wide Utilization (Over Time)</div>
+                <div class="chart-container">
+                    <canvas id="resourceChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">User Impact (Top 10 Active Users)</div>
+                <div class="chart-container">
+                    <canvas id="userChart"></canvas>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:1rem;">Displays total RAM/CPU consumed by all processes owned by the user.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage and Hardware -->
+    <div class="dashboard-section">
+        <h2>Storage & Hardware Health</h2>
+        <div class="grid">
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-title">Logical Disks</div>
+                <div class="table-wrapper">
+                    <table>
+<tr><th>DeviceID</th><th>VolumeName</th><th>SizeGB</th><th>FreeGB</th><th>UsedPercent</th></tr>
+<tr><td>C:</td><td>Windows</td><td>150.00</td><td>6.90</td><td>95.40</td></tr>
+<tr><td>D:</td><td>Data</td><td>500.00</td><td>120.45</td><td>75.91</td></tr>
+<tr><td>E:</td><td>Backups</td><td>1000.00</td><td>55.20</td><td>94.48</td></tr>
+</table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Hardware Errors (Since Script Start)</div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: -0.5rem; margin-bottom: 1rem;">From Windows System Event Logs</p>
+                <div class="metric"><span class="metric-label">Disk Errors</span><span class="metric-value" style="color: var(--warning)">3</span></div>
+                <div class="metric"><span class="metric-label">Network Errors</span><span class="metric-value" style="color: var(--critical)">18</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Applications -->
+    <div class="dashboard-section">
+        <h2>Application Utilization & Stability (Latest Sample)</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Top 10 CPU Consumers</div>
+                <div class="table-wrapper">
+                    <table>
+<tr><th>Name</th><th>CPU</th><th>Id</th><th>UserName</th></tr>
+<tr><td>chrome</td><td>2840.45</td><td>18402</td><td>dev_user1</td></tr>
+<tr><td>java</td><td>1925.10</td><td>4430</td><td>qa_tester</td></tr>
+<tr><td>Code</td><td>850.22</td><td>224</td><td>dev_user2</td></tr>
+<tr><td>sqlservr</td><td>620.15</td><td>1188</td><td>db_admin</td></tr>
+<tr><td>chrome</td><td>410.88</td><td>9044</td><td>rohan_admin</td></tr>
+</table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Top 10 Memory Consumers</div>
+                <div class="table-wrapper">
+                    <table>
+<tr><th>Name</th><th>RAM_MB</th><th>Id</th><th>UserName</th></tr>
+<tr><td>chrome (42 processes)</td><td>16450.22</td><td>*</td><td>dev_user1</td></tr>
+<tr><td>java</td><td>8192.00</td><td>4430</td><td>qa_tester</td></tr>
+<tr><td>sqlservr</td><td>4500.50</td><td>1188</td><td>db_admin</td></tr>
+<tr><td>Code</td><td>1850.30</td><td>224</td><td>dev_user2</td></tr>
+<tr><td>MsMpEng</td><td>850.11</td><td>884</td><td>SYSTEM</td></tr>
+</table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Crashing Apps</div>
+                <div class="table-wrapper">
+                    <table>
+<tr><th>Name</th><th>Count</th></tr>
+<tr><td>chrome.exe</td><td>18</td></tr>
+<tr><td>java.exe</td><td>12</td></tr>
+<tr><td>Code.exe</td><td>8</td></tr>
+<tr><td>Explorer.exe</td><td>4</td></tr>
+</table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Users -->
+    <div class="dashboard-section">
+        <h2>Active User Sessions</h2>
+        <div class="card">
+            <div class="table-wrapper">
+                <table>
+<tr><th>Username</th><th>SessionName</th><th>ID</th><th>State</th><th>IdleTime</th><th>LogonTime</th></tr>
+<tr><td>dev_user1</td><td>rdp-tcp#2</td><td>4</td><td>Active</td><td>none</td><td>3/16/2026 8:15 AM</td></tr>
+<tr><td>qa_tester</td><td>rdp-tcp#5</td><td>6</td><td>Active</td><td>0+00:45</td><td>3/21/2026 10:20 AM</td></tr>
+<tr><td>dev_user2</td><td>rdp-tcp#6</td><td>7</td><td>Active</td><td>0+02:15</td><td>3/22/2026 9:00 AM</td></tr>
+<tr><td>db_admin</td><td>rdp-tcp#8</td><td>9</td><td>Disc</td><td>1+04:10</td><td>3/15/2026 2:40 PM</td></tr>
+<tr><td>rohan_admin</td><td>console</td><td>1</td><td>Active</td><td>none</td><td>3/22/2026 11:30 PM</td></tr>
+</table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Server Trend Chart (Mocking 7 days, 1 point per 6 hours to simulate extreme load pattern)
+        const ctx = document.getElementById('resourceChart').getContext('2d');
+        const resourceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [
+                    "Mon 00:00","Mon 06:00","Mon 12:00","Mon 18:00",
+                    "Tue 00:00","Tue 06:00","Tue 12:00","Tue 18:00",
+                    "Wed 00:00","Wed 06:00","Wed 12:00","Wed 18:00",
+                    "Thu 00:00","Thu 06:00","Thu 12:00","Thu 18:00",
+                    "Fri 00:00","Fri 06:00","Fri 12:00","Fri 18:00",
+                    "Sat 00:00","Sat 06:00","Sat 12:00","Sat 18:00",
+                    "Sun 00:00","Sun 06:00","Sun 12:00","Sun 18:00"
+                ],
+                datasets: [
+                    {
+                        label: 'CPU Usage (%)',
+                        data: [
+                            45, 60, 95, 92,
+                            50, 75, 99, 98,
+                            80, 85, 99, 100,
+                            85, 90, 100, 99,
+                            90, 95, 100, 100,
+                            95, 98, 99, 98,
+                            95, 99, 100, 98
+                        ],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'RAM Usage (%)',
+                        data: [
+                            75, 78, 85, 88,
+                            82, 85, 90, 92,
+                            88, 90, 92, 94,
+                            90, 92, 95, 96,
+                            92, 94, 96, 98,
+                            94, 95, 97, 98,
+                            95, 96, 98, 94.2
+                        ],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                color: '#cbd5e1',
+                plugins: {
+                    legend: { labels: { color: '#f8fafc' } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', maxTicksLimit: 14 }
+                    }
+                }
+            }
+        });
+
+        // User Impact Bar Chart (Mocking massive memory/cpu hogs)
+        const userCtx = document.getElementById('userChart').getContext('2d');
+        const userChart = new Chart(userCtx, {
+            type: 'bar',
+            data: {
+                labels: ["dev_user1", "qa_tester", "db_admin", "dev_user2", "rohan_admin"],
+                datasets: [
+                    {
+                        label: 'RAM Consumption (MB)',
+                        data: [18450.22, 8502.10, 4850.55, 2200.40, 680.12],
+                        backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                        borderColor: '#8b5cf6',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'CPU Processing Impact',
+                        data: [3105.20, 1950.45, 640.10, 895.30, 422.88],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                color: '#cbd5e1',
+                plugins: {
+                    legend: { labels: { color: '#f8fafc' } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'RAM (MB)', color: '#94a3b8' },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'CPU Impact', color: '#94a3b8' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
