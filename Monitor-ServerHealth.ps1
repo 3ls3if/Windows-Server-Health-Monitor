@@ -40,7 +40,8 @@ if (-not $RunOnce) {
     Write-Host "WARNING: Please leave this PowerShell window open until the monitoring is complete." -ForegroundColor Red
 }
 
-$endTime = (Get-Date).AddDays($Days)
+$startTime = Get-Date
+$endTime = $startTime.AddDays($Days)
 $historyData = @()
 
 # Static System Data
@@ -199,6 +200,10 @@ while ($true) {
     }
 
     $timeRemaining = ($endTime - (Get-Date))
+    $remainingString = if ((Get-Date) -ge $endTime) { "Completed" } else { "$($timeRemaining.Days)d $($timeRemaining.Hours)h $($timeRemaining.Minutes)m" }
+
+    # Dynamic scroll width calculation based on 25px per data point
+    $chartWidth = if ($historyData.Count * 25 -gt 800) { "$($historyData.Count * 25)px" } else { "100%" }
 
     $headerStatusHtml = if ($RunOnce) {
         @"
@@ -212,7 +217,7 @@ while ($true) {
 "@
     } else {
         @"
-        <p>Target Duration: $Days Days | Remaining: $($timeRemaining.Days)d $($timeRemaining.Hours)h $($timeRemaining.Minutes)m</p>
+        <p>Target Duration: $Days Days | Started: $($startTime.ToString("yyyy-MM-dd HH:mm")) | Remaining: $remainingString</p>
         <div style="margin-top: 1rem;">
             <span class="live-badge">MONITORING ACTIVE</span>
         </div>
@@ -275,6 +280,12 @@ $html = @"
         .card-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1.2rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
         
         .chart-container { position: relative; height: 300px; width: 100%; }
+        .chart-scroll-wrapper { overflow-x: auto; overflow-y: hidden; width: 100%; }
+        .chart-scroll-wrapper::-webkit-scrollbar { height: 8px; }
+        .chart-scroll-wrapper::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+        .chart-scroll-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .chart-scroll-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+        .chart-area { position: relative; height: 300px; }
 
         .metric { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; padding: 0.4rem 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
         .metric:last-of-type { border-bottom: none; }
@@ -323,8 +334,10 @@ $html = @"
         <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));">
             <div class="card">
                 <div class="card-title">Server Wide Utilization (Over Time)</div>
-                <div class="chart-container">
-                    <canvas id="resourceChart"></canvas>
+                <div class="chart-scroll-wrapper">
+                    <div class="chart-area" style="width: $chartWidth;">
+                        <canvas id="resourceChart"></canvas>
+                    </div>
                 </div>
             </div>
             <div class="card">
